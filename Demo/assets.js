@@ -1,0 +1,1 @@
+new Texture("assets/sprites/player.png", "player");new Texture("assets/sprites/enemy.png", "enemy");new Texture("assets/sprites/shot.png", "bullet");
