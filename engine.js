@@ -14,12 +14,16 @@ var Game = {
 			Game.deltaTime = 1 / 60;
 		
 		//Canvas Size
-		Game.canvas.style.width = (innerWidth - 4) + "px";
-			Game.canvas.style.height = "";
-		if (Game.canvas.getBoundingClientRect().height > innerHeight){
-			Game.canvas.style.height = (innerHeight - 4) + "px";
-			Game.canvas.style.width = "";
+		if (resizeCanvas){
+			Game.canvas.style.width = (innerWidth - 4) + "px";
+				Game.canvas.style.height = "";
+			if (Game.canvas.getBoundingClientRect().height > innerHeight){
+				Game.canvas.style.height = (innerHeight - 4) + "px";
+				Game.canvas.style.width = "";
+			}
 		}
+		//canvasScale
+		Game.canvas.scale = canvasWidth / Game.canvas.getBoundingClientRect().width;
 		
 		//If the game isn't Paused
 		if (!Game.paused){
@@ -306,9 +310,9 @@ function Sprite(x, y, texture, scale, w, h, rotation){
 			gameObject = Game.gameObjects[i];
 			if ((!gameObject.canCollide) || (!gameObject.visible && !gameObject.canCollideWhileInvisible) || (this == gameObject))
 				continue;
-			if (this.position.x >= gameObject.position.x &&
+			if (this.position.x + this.size.x >= gameObject.position.x &&
 				this.position.x <= gameObject.position.x + gameObject.size.x &&
-				this.position.y >= gameObject.position.y &&
+				this.position.y + this.size.y >= gameObject.position.y &&
 				this.position.y <= gameObject.position.y + gameObject.size.y){
 				collisions.push(gameObject);
 			}

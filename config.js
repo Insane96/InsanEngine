@@ -6,6 +6,7 @@ var canvasBorderColor = "black";
 var canvasBorderSize = 2;
 var cursorVisible = true;
 var noBodyMargin = true;
+var resizeCanvas = true;
  
 Game.layersName = [
 /*0: */ "player", 
