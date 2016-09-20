@@ -1,7 +1,13 @@
-//You can define canvas Width and Canvas height here:
-var canvasWidth = 1280;
-var canvasHeight = 720;
-//you can define some canvas css style with "canvas#game{}" in a css file or <style> tag:
+/*
+	Added Layer system, with Game.LayerToName(layer), Game.NameToLayer(name) and Game.GetLayer(layer)
+		You can set the layer of a gameObject with GameObject.layer = layerNumber;
+		In config.js you can config the layer names, up to 31 names, defaults to ["player", "enemy"]
+		Layer -1 for game objects, means no layer
+	Added centerPosition property for every game object
+		returns the center position of the game object (Vector2(x + width / 2, y + height / 2))
+	Added config.js for some configurations
+	Renamed scaledSize in size and size in unscaledSize
+*/
 var Game = {
 	deltaTime: 0,
 	oldTime: 0,
@@ -13,7 +19,7 @@ var Game = {
 		currentTime = new Date().getTime();
 		Game.deltaTime = (currentTime - (Game.oldTime || currentTime)) / 1000 * Game.timeScale;
 		Game.oldTime = currentTime;
-		document.head.getElementsByTagName("title")[0].innerHTML = "InsanEngine (" + Math.round(1 / Game.deltaTime / Game.timeScale) + ")";
+		document.head.getElementsByTagName("title")[0].innerHTML = "InsanEngine (" + Math.round(1 / Game.deltaTime * Game.timeScale) + ")";
 		if (Game.deltaTime > 1)
 			Game.deltaTime = 1 / 60;
 		
@@ -53,6 +59,25 @@ var Game = {
 	
 	gameObjects: [],
 	
+	layers: new Array(31),
+	layersName: [],
+	
+	LayerToName: function(layer){
+		return Game.layersName[layer];
+	},
+	
+	NameToLayer: function(name){
+		for (var i = 0; i < Game.layersName.length; i++){
+			if (Game.layersName[i] == name)
+				return i;
+		}
+		console.Warning("Failed to retrieve layer " + name);
+	},
+	
+	GetLayer: function(layer){
+		return Game.layers[layer];
+	},
+	
 	audio: [],
 	
 	textures: [],
@@ -76,21 +101,30 @@ var Game = {
 
 	AddGameObject: function(gameObject){
 		for (var i = 0; i < Game.gameObjects.length; i++)
-			if (Game.gameObjects[i] == gameObject)
+			if (Game.gameObjects[i] == gameObject){
+				console.Warning("gameObject already exist in Game");
 				return;
+			}
 		Game.gameObjects.push(gameObject);
 		gameObject.Start();
 	},
 	
 	RemoveGameObject: function(gameObject){
 		for (var i = 0; i < Game.gameObjects.length; i++)
-			if (Game.gameObjects[i] == gameObject)
+			if (Game.gameObjects[i] == gameObject){
+				Game.gameObjects.splice(i, 1);
 				return;
-		Game.gameObjects.push(gameObject);
-		gameObject.Start();
+			}
+		console.Warning("Failed to remove gameObject");
 	},
 	
 	AddTexture: function(texture){
+		for (var i = 0; i < Game.textures.length; i++){
+			if (Game.textures[i] == texture){
+				console.Warning("Texture already in textures list");
+				return;
+			}
+		}
 		Game.textures.push(texture);
 	},
 	
@@ -101,7 +135,7 @@ var Game = {
 				return;
 			}
 		}
-		console.log("Failed to remove texture " + name);
+		console.Warning("Failed to remove texture " + name);
 	},
 	
 	GetTexture: function(name){
@@ -110,17 +144,27 @@ var Game = {
 				return Game.textures[i];
 			}
 		}
-		console.log("Failed to retrieve texture " + name);
+		console.Warning("Failed to retrieve texture " + name);
 	},
+}
+for (var i = 0; i < Game.layers.length; i++){
+	Game.layers[i] = [];
 }
 
 function Init(){
+	if (noBodyMargin)
+		document.body.style.margin = "0px";
 	document.body.innerHTML += "<canvas id=\"game\" width=" + canvasWidth + " height=" + canvasHeight + "></canvas>";
 	Game.canvas = document.getElementById("game");
+	Game.canvas.style.border = "solid " + canvasBorderColor + " " + canvasBorderSize + "px";
+	Game.canvas.style.display = "block";
+	Game.canvas.style.margin = "auto";
+	if (!cursorVisible)
+		Game.canvas.style.cursor = "none";
 	Game.ctx = Game.canvas.getContext("2d");
 	
 	if (!Game.ctx)
-		alert("Your browser doesn't support HTML5, please, switch to a newer browser");
+		alert("Your browser seems to not support HTML5, please, switch to a newer browser");
 	
 	InitGame();
 	Game.GameLoop();
@@ -129,9 +173,31 @@ function Init(){
 
 function GameObject(){
 	this.position = new Vector2(0, 0);
+	Object.defineProperty(this, "centerPosition", {
+		get: function(){
+			return new Vector2(this.position.x + this.size.x / 2, this.position.y + this.size.y / 2);
+		}
+	});
 	this.canCollide = true;
 	this.canCollideWhileInvisible = false;
 	this.tags = [];
+	var layer = -1;
+	Object.defineProperty(this, "layer", {
+		get: function(){
+			return layer;
+		},
+		set: function(value){
+			if (layers =! -1)
+			for (var i = 0; i < Game.layers[layer].length; i++){
+				if (Game.layers[layer][i] == this){
+					Game.layers[layer].splice(i, 1);
+					break;
+				}
+			}
+			layer = value;
+			Game.layers[layer].push(this);
+		},
+	});
 	
 	this.Start = function(){
 		
@@ -161,50 +227,7 @@ function GameObject(){
 	}
 }
 
-function Sprite(x, y, texture, scale, w, h, rotation){
-	if (arguments.length < 3 || arguments.length > 7)
-		throw "Error: Sprite constructor requires minimum 3 arguments and a maximum of 7\nArguments: " + arguments.length;
-	GameObject.apply(this);
-	this.position = new Vector2(x, y);
-	this.texture = texture;
-	this.scale = (typeof scale === "undefined") ? 1 : scale;
-	this.size = (typeof w === "undefined") ? new Vector2(texture.width, texture.height) : new Vector2(w, h);
-	this.scaledSize = new Vector2(this.size.x * this.scale, this.size.y * this.scale);
-	this.rotation = (typeof rotation === "undefined") ? 0 : rotation;
-	this.visible = true;
-	this.Draw = function(){
-		if (this.visible){
-			if (this.rotation != 0){
-				tx = this.position.x + this.scaledSize.x / 2;
-				ty = this.position.y + this.scaledSize.y / 2;
-				Game.ctx.save();
-				Game.ctx.translate(tx, ty);
-				Game.ctx.rotate(Math.DegrToRad(this.rotation));
-				this.scaledSize = new Vector2(this.size.x * this.scale, this.size.y * this.scale);
-				Game.ctx.drawImage(texture.image, -this.scaledSize.x / 2, -this.scaledSize.x / 2, this.scaledSize.x, this.scaledSize.y);
-				Game.ctx.restore();
-			}
-			else
-				Game.ctx.drawImage(texture.image, this.position.x, this.position.y, this.scaledSize.x, this.scaledSize.y);
-		}
-	}
-	
-	this.OnCollisionEnter = function(){
-		var collisions = [];
-		for (var i = 0; i < Game.gameObjects.length; i++){
-			gameObject = Game.gameObjects[i];
-			if ((!gameObject.canCollide) || (!gameObject.visible && !gameObject.canCollideWhileInvisible) || (this == gameObject))
-				continue;
-			if (this.position.x >= gameObject.position.x &&
-				this.position.x <= gameObject.position.x + gameObject.scaledSize.x &&
-				this.position.y >= gameObject.position.y &&
-				this.position.y <= gameObject.position.y + gameObject.scaledSize.y){
-				collisions.push(gameObject);
-			}
-		}
-		return collisions;
-	}
-	
+function Clickable(){
 	this.onHold = function(btn){
 		switch (btn){
 			case Input.MOUSE_LEFT:
@@ -251,12 +274,57 @@ function Sprite(x, y, texture, scale, w, h, rotation){
 		return Sprite.MouseInsideBoundaries(this);
 	}
 }
-Sprite.prototype = Object.create(GameObject.prototype);
 
-Sprite.MouseInsideBoundaries = function(rect, inputMouse){
-	if ((inputMouse || inputMouse === undefined) && Input.mouseX >= rect.position.x && Input.mouseX <= (rect.position.x + rect.scaledSize.x) && Input.mouseY >= rect.position.y && Input.mouseY <= (rect.position.y + rect.scaledSize.y))
+Clickable.MouseInsideBoundaries = function(rect, inputMouse){
+	if ((inputMouse || inputMouse === undefined) && Input.mouseX >= rect.position.x && Input.mouseX <= (rect.position.x + rect.size.x) && Input.mouseY >= rect.position.y && Input.mouseY <= (rect.position.y + rect.size.y))
 		return true;
 	return false;
+}
+
+function Sprite(x, y, texture, scale, w, h, rotation){
+	if (arguments.length < 3 || arguments.length > 7)
+		throw "Error: Sprite constructor requires minimum 3 arguments and a maximum of 7\nArguments: " + arguments.length;
+	GameObject.apply(this);
+	Clickable.apply(this);
+	this.position = new Vector2(x, y);
+	this.texture = texture;
+	this.scale = (typeof scale === "undefined") ? 1 : scale;
+	this.unscaledSize = (typeof w === "undefined") ? new Vector2(texture.width, texture.height) : new Vector2(w, h);
+	this.size = new Vector2(this.unscaledSize.x * this.scale, this.unscaledSize.y * this.scale);
+	this.rotation = (typeof rotation === "undefined") ? 0 : rotation;
+	this.visible = true;
+	this.Draw = function(){
+		if (this.visible){
+			if (this.rotation != 0){
+				tx = this.position.x + this.size.x / 2;
+				ty = this.position.y + this.size.y / 2;
+				Game.ctx.save();
+				Game.ctx.translate(tx, ty);
+				Game.ctx.rotate(Math.DegrToRad(this.rotation));
+				this.size = new Vector2(this.unscaledSize.x * this.scale, this.unscaledSize.y * this.scale);
+				Game.ctx.drawImage(texture.image, -this.size.x / 2, -this.size.x / 2, this.size.x, this.size.y);
+				Game.ctx.restore();
+			}
+			else
+				Game.ctx.drawImage(texture.image, this.position.x, this.position.y, this.size.x, this.size.y);
+		}
+	}
+	
+	this.OnCollisionEnter = function(){
+		var collisions = [];
+		for (var i = 0; i < Game.gameObjects.length; i++){
+			gameObject = Game.gameObjects[i];
+			if ((!gameObject.canCollide) || (!gameObject.visible && !gameObject.canCollideWhileInvisible) || (this == gameObject))
+				continue;
+			if (this.position.x >= gameObject.position.x &&
+				this.position.x <= gameObject.position.x + gameObject.size.x &&
+				this.position.y >= gameObject.position.y &&
+				this.position.y <= gameObject.position.y + gameObject.size.y){
+				collisions.push(gameObject);
+			}
+		}
+		return collisions;
+	}
 }
 
 function r9(){
@@ -307,7 +375,6 @@ function Text(x, y, txt, fontSize, fontType, isFilled){
 		}
 	}
 }
-Text.prototype = Object.create(GameObject.prototype);
 
 
 /* function Line(sx, sy, ex, ey){
@@ -326,7 +393,7 @@ Text.prototype = Object.create(GameObject.prototype);
 		}
 	}
 }
-Line.prototype = Object.create(GameObject.prototype); */
+ */
 
 
 function SimpleShape(x, y){
@@ -337,12 +404,12 @@ function SimpleShape(x, y){
 	this.isFilled = true;
 	this.color = "#000";
 }
-SimpleShape.prototype = Object.create(GameObject.prototype);
 
 function Rectangle(x, y, w, h){
 	if (arguments.length != 4)
 		throw "Error: Rectangle constructor requires 4 arguments\nArguments: " + arguments.length;
 	SimpleShape.apply(this, [x, y]);
+	Clickable.apply(this);
 	this.position = new Vector2(x, y);
 	this.size = new Vector2(w, h);
 	this.visible = true;
@@ -358,54 +425,7 @@ function Rectangle(x, y, w, h){
 			}
 		}
 	}
-	
-	this.onHold = function(btn){
-		switch (btn){
-			case Input.MOUSE_LEFT:
-				return Rectangle.MouseInsideBoundaries(this, Input.mouseLeft);
-			break;
-			case Input.MOUSE_MIDDLE:
-				return Rectangle.MouseInsideBoundaries(this, Input.mouseMiddle);
-			break;
-			case Input.MOUSE_RIGHT:
-				return Rectangle.MouseInsideBoundaries(this, Input.mouseRight);
-			break;
-		}
-	}
-	
-	this.onClick = function(btn){
-		switch (btn){
-			case Input.MOUSE_LEFT:
-				return Rectangle.MouseInsideBoundaries(this, Input.mouseDownLeft);
-			break;
-			case Input.MOUSE_MIDDLE:
-				return Rectangle.MouseInsideBoundaries(this, Input.mouseDownMiddle);
-			break;
-			case Input.MOUSE_RIGHT:
-				return Rectangle.MouseInsideBoundaries(this, Input.mouseDownRight);
-			break;
-		}
-	}
-	
-	this.onRelease = function(btn){
-		switch (btn){
-			case Input.MOUSE_LEFT:
-				return Rectangle.MouseInsideBoundaries(this, Input.mouseUpLeft);
-			break;
-			case Input.MOUSE_MIDDLE:
-				return Rectangle.MouseInsideBoundaries(this, Input.mouseUpMiddle);
-			break;
-			case Input.MOUSE_RIGHT:
-				return Rectangle.MouseInsideBoundaries(this, Input.mouseUpRight);
-			break;
-		}
-	}
-	
-	this.OnHover = function(){
-		return Rectangle.MouseInsideBoundaries(this);
-	}
 }
-Rectangle.prototype = SimpleShape.prototype;
 Rectangle.MouseInsideBoundaries = function(rect, inputMouse){
 	if ((inputMouse || inputMouse === undefined) && Input.mouseX >= rect.position.x && Input.mouseX <= (rect.position.x + rect.size.x) &&
 		Input.mouseY >= rect.position.y && Input.mouseY <= (rect.position.y + rect.size.y))
@@ -443,7 +463,6 @@ function Circle(x, y, r){
 		}
 	}
 }
-Circle.prototype = SimpleShape.prototype;
 
 function Sound(url, volume, playOnLoad){
 	if (arguments.length < 1 || arguments.length > 3)

@@ -1,1 +1,1 @@
-function InitGame(){	//Used to prevent aliasing when enlarging images	//Can be commented / removed to enable aliasing	Game.ctx.imageSmoothingEnabled = false;		//Write code here}
+function InitGame(){	//Used to prevent aliasing when enlarging images	//Can be commented / set to true to enable aliasing	Game.ctx.imageSmoothingEnabled = false;		//Write code here}
