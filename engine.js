@@ -308,7 +308,7 @@ function Sprite(x, y, texture, scale, w, h, rotation){
 		var collisions = [];
 		for (var i = 0; i < Game.gameObjects.length; i++){
 			gameObject = Game.gameObjects[i];
-			if ((!gameObject.canCollide) || (!gameObject.visible && !gameObject.canCollideWhileInvisible) || (this == gameObject))
+			if ((!gameObject.canCollide) || (!gameObject.visible && !gameObject.canCollideWhileInvisible) || (!this.visible && !this.canCollideWhileInvisible) || (this == gameObject))
 				continue;
 			if (this.position.x + this.size.x >= gameObject.position.x &&
 				this.position.x <= gameObject.position.x + gameObject.size.x &&
