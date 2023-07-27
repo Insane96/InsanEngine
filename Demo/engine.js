@@ -26,12 +26,6 @@ var Game = {
 			Game.canvas.style.width = "";
 		}
 
-		//If the game isn't Paused
-		if (!Game.paused){
-			Game.Update();
-		}
-		Game.Draw();
-
 		//Input Down and Up reset
 		for (var i = 0; i < 128; i++){
 			Input.keyDown[i] = false;
@@ -43,6 +37,12 @@ var Game = {
 		Input.mouseUpRight = false;
 		Input.mouseDownMiddle = false;
 		Input.mouseUpMiddle = false;
+
+		//If the game isn't Paused
+		if (!Game.paused){
+			Game.Update();
+		}
+		Game.Draw();
 
 		//Loop
 		window.requestAnimFrame(function(){
